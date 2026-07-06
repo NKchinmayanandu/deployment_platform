@@ -1,13 +1,8 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String
 from app.db.base import Base
-from datetime import datetime
-
-class Endpoint(Base):
-    __tablename__ = "endpoints"
+class User(Base):
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    url = Column(String, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"),index=True)
-    last_status = Column(String, nullable=True)
-    last_checked = Column(DateTime, nullable=True)
-    last_changed = Column(DateTime, nullable=True)
+    email = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
