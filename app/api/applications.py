@@ -1,0 +1,50 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.dependencies import get_current_user
+from app.db.session import get_db
+from app.models.user import User
+from app.schemas.application import ApplicationCreate, ApplicationOut
+from app.services.application import (
+    create_application,
+    delete_application,
+    get_application,
+    get_user_applications,
+)
+
+router = APIRouter(prefix="/applications", tags=["Applications"])
+
+
+@router.post("/", response_model=ApplicationOut, status_code=201)
+async def create(
+    app_in: ApplicationCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await create_application(db, app_in, current_user)
+
+
+@router.get("/", response_model=list[ApplicationOut])
+async def list_applications(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await get_user_applications(db, current_user)
+
+
+@router.get("/{app_id}", response_model=ApplicationOut)
+async def get(
+    app_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await get_application(db, app_id, current_user)
+
+
+@router.delete("/{app_id}", status_code=204)
+async def delete(
+    app_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await delete_application(db, app_id, current_user)
