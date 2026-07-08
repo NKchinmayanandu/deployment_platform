@@ -10,6 +10,7 @@ from app.schemas.application import ApplicationCreate, ApplicationOut
 async def create_application(
     db: AsyncSession, app_in: ApplicationCreate, current_user: User
 ) -> ApplicationOut:
+    
     application = Application(
         owner_id=current_user.id,
         name=app_in.name,
