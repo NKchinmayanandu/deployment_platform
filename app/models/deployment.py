@@ -25,8 +25,8 @@ class Deployment(Base):
         ForeignKey("applications.id", ondelete="CASCADE"), unique=True
     )
     container_id: Mapped[str | None] = mapped_column(String(64))
-    container_name: Mapped[str | None] = mapped_column(String(100))
-    host_port: Mapped[int | None] = mapped_column()
+    container_name: Mapped[str | None] = mapped_column(String(100),unique=True)
+    host_port: Mapped[int | None] = mapped_column(unique=True)
     status: Mapped[DeploymentStatus] = mapped_column(
         Enum(DeploymentStatus), default=DeploymentStatus.QUEUED
     )
