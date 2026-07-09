@@ -3,6 +3,9 @@ from app.cache.port_allocation import get_next_port
 import asyncio
 import docker
 import subprocess
+from app.db.session import AsyncSessionLocal
+from app.models.deployment import Deployment
+from app.repositories.get_deployment import _get_deployment
 async def delete_application_container(container_name:str):
     loop = asyncio.get_event_loop()
     def _delete():
@@ -18,15 +21,22 @@ async def delete_application_container(container_name:str):
     # Run the synchronous docker call in a separate thread
     await loop.run_in_executor(None, _delete)
 
-async def run_deployment_logic(app_id:int,image_name:str):
-    container_name = f"app_{app_id}_{image_name.replace(':','_')}"
+async def run_deployment_logic(deployment_id:int,image_name:str):
+    container_name = f"app-{deployment_id}"
     port = get_next_port()
-    subprocess.run(["docker","pull",image_name],check=True,capture_output=True)
-
-    CMD = ["docker","run","-d","--name",
-               container_name,"-p",f"{port}:80",image_name]
-    
-    subprocess.run(CMD,check=True,capture_output=True)
+    await asyncio.to_thread(client.images.pull,image_name,)
+    container = await asyncio.to_thread(client.containers.run,
+                                        image_name,
+                                        detach=True,
+                                        name=container_name,
+                                        ports={"80/tcp":port})
+    async with AsyncSessionLocal() as db:
+        deployment = await _get_deployment(deployment_id, db)
+        deployment.status = "Running"
+        deployment.container_name = container.name
+        deployment.container_id = container.id
+        deployment.host_port = port
+        await db.commit()
 
     return None
     
