@@ -1,12 +1,12 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from fastapi import HTTPException
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.application import Application
 from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationOut
 from app.services.deployment_service import delete_application_container
-from sqlalchemy.orm import selectinload     
+from app.repositories.check_app import check_app
 async def create_application(
     db: AsyncSession, app_in: ApplicationCreate, current_user: User
 ) -> ApplicationOut:
@@ -35,33 +35,23 @@ async def get_user_applications(
 async def get_application(
     db: AsyncSession, app_id: int, current_user: User
 ) -> ApplicationOut:
-    application = await _get_owned_application(db, app_id, current_user)
+    application = await check_app(app_id)
     return ApplicationOut.model_validate(application)
 
 
 async def delete_application(
     db: AsyncSession, app_id: int, current_user: User
 ) -> None:
-    app = await _get_owned_application(db, app_id, current_user)
+    app = await check_app(app_id)
     deployment = app.deployment
-    if app.deployment and deployment.container_name:
+    if current_user.id == app.owner_id:
+        if app.deployment and deployment.container_name:
+            await delete_application_container(app.deployment.container_name)
+        else:
+            raise HTTPException(status_code=400,detail="not allowed")
         await delete_application_container(app.deployment.container_name)
     await db.delete(app)
     await db.commit()
 
 
-async def _get_owned_application(   
-    db: AsyncSession, app_id: int, current_user: User
-) -> Application:
-    result = await db.execute(
-        select(Application).
-        options(selectinload(Application.deployment)).
-        where(Application.id == app_id))
-    application = result.scalar_one_or_none()
 
-    if not application:
-        raise NotFoundError("Application not found")
-    if application.owner_id != current_user.id:
-        raise ForbiddenError("You don't own this application")
-
-    return application

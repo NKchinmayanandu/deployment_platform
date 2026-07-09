@@ -34,5 +34,5 @@ class Deployment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()
     )
-
+    deployment_url: Mapped[str | None] = mapped_column(String(60), unique=True)
     application: Mapped["Application"] = relationship(back_populates="deployment")
