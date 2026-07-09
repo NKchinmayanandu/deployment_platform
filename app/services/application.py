@@ -35,21 +35,20 @@ async def get_user_applications(
 async def get_application(
     db: AsyncSession, app_id: int, current_user: User
 ) -> ApplicationOut:
-    application = await check_app(app_id)
+    application = await check_app(app_id,db=db)
     return ApplicationOut.model_validate(application)
 
 
 async def delete_application(
     db: AsyncSession, app_id: int, current_user: User
 ) -> None:
-    app = await check_app(app_id)
+    app = await check_app(app_id,db=db)
     deployment = app.deployment
     if current_user.id == app.owner_id:
         if app.deployment and deployment.container_name:
             await delete_application_container(app.deployment.container_name)
         else:
             raise HTTPException(status_code=400,detail="not allowed")
-        await delete_application_container(app.deployment.container_name)
     await db.delete(app)
     await db.commit()
 
