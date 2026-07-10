@@ -21,7 +21,6 @@ def deploy_container_task(self,deployment_id:int,image_name:str):
     
 async def _deploy(deployment_id:int,image_name):
     async with AsyncSessionLocal() as db:
-        print("Updating status to DEPLOYING")
         await update_db_status(deployment_id=deployment_id,status=DeploymentStatus.DEPLOYING,db=db)
         await run_deployment_logic(deployment_id=deployment_id,image_name=image_name)
         await update_db_status(deployment_id=deployment_id,status=DeploymentStatus.RUNNING,db=db)
