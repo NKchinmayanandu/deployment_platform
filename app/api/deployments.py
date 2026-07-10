@@ -7,7 +7,7 @@ from app.models.user import User
 from app.workers.deployment_worker import deploy_container_task
 from app.models.application import Application
 from app.repositories.check_app import check_app
-from app.models.deployment import Deployment
+from app.models.deployment import Deployment,DeploymentStatus
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -15,19 +15,20 @@ router = APIRouter(prefix="/deployments", tags=["Deployments"])
 async def deploy(app_id: int,
                  db : AsyncSession=Depends(get_db),
                  current_user: User = Depends(get_current_user)):
-    user = db.execute(Application).where(Application.owner_id==current_user.id)
+    user = await db.execute(select(Application).where(Application.owner_id==current_user.id,
+                                                      Application.id==app_id))
+    user = user.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404,detail="Not allowed")
-    app = await check_app(app_id=app_id,db=db,image_name=image_name)
-    image_name = app.image_name
+        raise HTTPException(status_code=404,detail="application not found")
+    image_name = user.image_name
     deployment = Deployment(
         application_id=app_id,
-        status = "Queued"
+        status = DeploymentStatus.QUEUED
     )
     db.add(deployment)
     await db.commit()
     await db.refresh(deployment)
-    deploy_container_task.delay(deployment.id,app_id)
+    deploy_container_task.delay(deployment.id,image_name)
     return {
         "message":"deployment started"
     }

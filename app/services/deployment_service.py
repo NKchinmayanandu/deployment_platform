@@ -2,10 +2,9 @@ from app.infrastructure.docker_client import client
 from app.cache.port_allocation import get_next_port
 import asyncio
 import docker
-import subprocess
 from app.db.session import AsyncSessionLocal
 from app.models.deployment import Deployment
-from app.repositories.get_deployment import _get_deployment
+from app.repositories.get_deployment import deployment_get
 async def delete_application_container(container_name:str):
     loop = asyncio.get_event_loop()
     def _delete():
@@ -23,7 +22,7 @@ async def delete_application_container(container_name:str):
 
 async def run_deployment_logic(deployment_id:int,image_name:str):
     container_name = f"app-{deployment_id}"
-    port = get_next_port()
+    port = await get_next_port()
     await asyncio.to_thread(client.images.pull,image_name,)
     container = await asyncio.to_thread(client.containers.run,
                                         image_name,
@@ -31,8 +30,7 @@ async def run_deployment_logic(deployment_id:int,image_name:str):
                                         name=container_name,
                                         ports={"80/tcp":port})
     async with AsyncSessionLocal() as db:
-        deployment = await _get_deployment(deployment_id, db)
-        deployment.status = "Running"
+        deployment = await deployment_get(deployment_id, db)
         deployment.container_name = container.name
         deployment.container_id = container.id
         deployment.host_port = port
