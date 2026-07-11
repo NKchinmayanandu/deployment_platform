@@ -22,3 +22,6 @@ class DeploymentStatusOut(BaseModel):
     status: DeploymentStatus
     url: str | None = None
     host_port: int | None = None
+
+    model_config = {"from_attributes":True}
+    

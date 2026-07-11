@@ -7,7 +7,7 @@ from app.models.user import User
 from app.workers.deployment_worker import deploy_container_task
 from app.models.application import Application
 from app.models.deployment import Deployment,DeploymentStatus
-from app.repositories.get_deployment import deployment_get_db
+from app.services.deployment import get_deployment_status
 from app.schemas.deployment import DeploymentStatusOut
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
@@ -51,7 +51,13 @@ async def remove(app_id: int, current_user: User = Depends(get_current_user)):
 
 
 @router.get("/{app_id}/status")
-async def status(deployment_id: int,db:AsyncSession=Depends(get_db),current_user: User = Depends(get_current_user)):
-    deployment = await deployment_get_db(depolyment_id=deployment_id,db=db,current_user=current_user)
-    return DeploymentStatusOut.model_validate(deployment)
-
+async def status(
+    app_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await get_deployment_status(
+        app_id=app_id,
+        db=db,
+        current_user=current_user,
+    )
