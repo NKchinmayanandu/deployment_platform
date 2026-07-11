@@ -37,4 +37,22 @@ async def run_deployment_logic(deployment_id:int,image_name:str):
         await db.commit()
 
     return None
+
+from docker.errors import NotFound
+
+async def stop_deployed_container(container_name: str) -> bool:
+    try:
+        container = client.containers.get(container_name)
+
+        await asyncio.to_thread(container.reload)
+
+        if container.status == "exited":
+            return True
+
+        await asyncio.to_thread(container.stop)
+        return True
+
+    except NotFound:
+        return False
+
     
