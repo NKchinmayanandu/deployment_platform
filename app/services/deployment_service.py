@@ -17,8 +17,7 @@ async def delete_application_container(container_name:str):
             print(f"Error deleting container {container_name}: {e}")
             raise e
 
-    # Run the synchronous docker call in a separate thread
-    await loop.run_in_executor(None, _delete)
+    await asyncio.to_thread(_delete)
 
 async def run_deployment_logic(deployment_id:int,image_name:str):
     container_name = f"app-{deployment_id}"
@@ -34,6 +33,7 @@ async def run_deployment_logic(deployment_id:int,image_name:str):
         deployment.container_name = container.name
         deployment.container_id = container.id
         deployment.host_port = port
+        deployment.deployment_url = f"http://localhost:{port}"
         await db.commit()
 
     return None

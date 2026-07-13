@@ -15,6 +15,7 @@ class DeploymentStatus(str, enum.Enum):
     RUNNING = "RUNNING"
     STOPPED = "STOPPED"
     FAILED = "FAILED"
+    RESTARTING = "RESTARTING"
 
 
 class Deployment(Base):
@@ -28,7 +29,8 @@ class Deployment(Base):
     container_name: Mapped[str | None] = mapped_column(String(100),unique=True)
     host_port: Mapped[int | None] = mapped_column(unique=True)
     status: Mapped[DeploymentStatus] = mapped_column(
-        Enum(DeploymentStatus), default=DeploymentStatus.QUEUED
+        type_=Enum(DeploymentStatus, name="deploymentstatus", create_type=False),
+        default=DeploymentStatus.QUEUED
     )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
