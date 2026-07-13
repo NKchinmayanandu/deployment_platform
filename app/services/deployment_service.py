@@ -5,7 +5,7 @@ import docker
 from app.db.session import AsyncSessionLocal
 from app.repositories.get_deployment import deployment_get
 import logging
-async def delete_application_container(container_name:str):
+async def delete_application(container_name:str):
     loop = asyncio.get_event_loop()
     def _delete():
         try:
@@ -39,6 +39,38 @@ async def run_deployment_logic(deployment_id:int,image_name:str):
     return None
 
 from docker.errors import NotFound
+
+
+async def start_container(container_name: str) -> tuple[bool, str]:
+    try:
+        container = await asyncio.to_thread(client.containers.get, container_name)
+        await asyncio.to_thread(container.reload)
+
+        if container.status == "running":
+            return True, "already_running"
+
+        await asyncio.to_thread(container.start)
+        return True, "started"
+
+    except NotFound:
+        return False, "not_found"
+    except Exception as e:
+        logging.exception(f"Failed to start {container_name}: {e}")
+        raise
+
+
+async def remove_container(container_name: str) -> tuple[bool, str]:
+    try:
+        container = await asyncio.to_thread(client.containers.get, container_name)
+        await asyncio.to_thread(container.remove, force=True)
+        return True, "removed"
+
+    except NotFound:
+        logging.info(f"Container {container_name} not found during remove, skipping.")
+        return False, "not_found"
+    except Exception as e:
+        logging.exception(f"Failed to remove {container_name}: {e}")
+        raise
 
 async def stop_deployed_container(container_name: str) -> bool:
     try:

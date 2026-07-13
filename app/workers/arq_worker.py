@@ -6,6 +6,9 @@ from app.core.config import settings
 from app.workers.deployment_worker import (
     deploy_container_task,
     restart_container_task,
+    start_container_task,
+    remove_container_task,
+    remove_deleted_container_task,
     stop_container_task,
 )
 
@@ -19,6 +22,9 @@ class WorkerSettings:
         deploy_container_task,
         stop_container_task,
         restart_container_task,
+        start_container_task,
+        remove_container_task,
+        remove_deleted_container_task,
     ]
 
     redis_settings = _redis_settings_from_url(settings.REDIS_URL)

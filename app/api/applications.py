@@ -7,10 +7,10 @@ from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationOut
 from app.services.application import (
     create_application,
-    delete_application,
     get_application,
     get_user_applications,
 )
+from app.repositories.check_app import check_app
 import logging
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -44,11 +44,27 @@ async def get(
     return await get_application(db, app_id, current_user)
 
 
+from fastapi import HTTPException, Request
+
 @router.delete("/{app_id}", status_code=204)
 async def delete(
     app_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     logging.info("delete app requested")
-    await delete_application(db, app_id, current_user)
+    app = await check_app(app_id, db=db)
+    if not app:
+        raise HTTPException(status_code=404, detail="Application not found")
+    if app.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    if app.deployment and app.deployment.container_name:
+        await request.app.state.arq_pool.enqueue_job(
+            "remove_deleted_container_task",
+            app.deployment.container_name,
+        )
+    
+    await db.delete(app)
+    await db.commit()

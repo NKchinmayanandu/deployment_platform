@@ -16,6 +16,8 @@ class DeploymentStatus(str, enum.Enum):
     STOPPED = "STOPPED"
     FAILED = "FAILED"
     RESTARTING = "RESTARTING"
+    STARTING = "STARTING"
+    REMOVED = "REMOVED"
 
 
 class Deployment(Base):
