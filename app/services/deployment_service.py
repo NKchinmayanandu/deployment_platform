@@ -55,4 +55,14 @@ async def stop_deployed_container(container_name: str) -> bool:
     except NotFound:
         return False
 
-    
+async def restart_container(container_name:str) -> bool:
+    try:
+        container = client.containers.get(container_name)
+
+        await asyncio.to_thread(container.restart)
+        return True
+    except NotFound:
+        return False
+    except Exception as e:
+        print(f"Failed to restart {container_name}: {e}")
+        return False
