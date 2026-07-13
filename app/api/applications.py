@@ -11,7 +11,7 @@ from app.services.application import (
     get_application,
     get_user_applications,
 )
-
+import logging
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
 
@@ -21,6 +21,7 @@ async def create(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("create app requested")
     return await create_application(db, app_in, current_user)
 
 
@@ -29,6 +30,7 @@ async def list_applications(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("get app list requested")
     return await get_user_applications(db, current_user)
 
 
@@ -38,6 +40,7 @@ async def get(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("get app requested")
     return await get_application(db, app_id, current_user)
 
 
@@ -47,4 +50,5 @@ async def delete(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("delete app requested")
     await delete_application(db, app_id, current_user)

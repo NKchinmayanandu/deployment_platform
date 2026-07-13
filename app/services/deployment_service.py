@@ -3,8 +3,8 @@ from app.cache.port_allocation import get_next_port
 import asyncio
 import docker
 from app.db.session import AsyncSessionLocal
-from app.models.deployment import Deployment
 from app.repositories.get_deployment import deployment_get
+import logging
 async def delete_application_container(container_name:str):
     loop = asyncio.get_event_loop()
     def _delete():
@@ -14,7 +14,7 @@ async def delete_application_container(container_name:str):
         except docker.errors.NotFound:
             print(f"Container {container_name} not found, skipping.")
         except Exception as e:
-            print(f"Error deleting container {container_name}: {e}")
+            logging.exception(f"Error deleting container {container_name}: {e}")
             raise e
 
     await asyncio.to_thread(_delete)
@@ -64,5 +64,5 @@ async def restart_container(container_name:str) -> bool:
     except NotFound:
         return False
     except Exception as e:
-        print(f"Failed to restart {container_name}: {e}")
+        logging.exception(f"Failed to restart {container_name}: {e}")
         return False

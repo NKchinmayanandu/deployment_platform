@@ -6,6 +6,7 @@ from app.services.deployment_service import (
     run_deployment_logic,
     stop_deployed_container,
 )
+import logging
 
 
 async def _deploy(deployment_id: int, image_name: str) -> None:
@@ -55,24 +56,30 @@ async def _mark_failed(deployment_id: int) -> None:
 
 
 async def deploy_container_task(ctx: dict, deployment_id: int, image_name: str) -> None:
+    logging.info("deploy container started")
     try:
         await _deploy(deployment_id=deployment_id, image_name=image_name)
     except Exception:
         await _mark_failed(deployment_id=deployment_id)
+        logging.exception(f"deploy container failed")
         raise  
 
 
 async def stop_container_task(ctx: dict, deployment_id: int, container_name: str) -> None:
+    logging.info("stop container started")
     try:
         await _stop(deployment_id=deployment_id, container_name=container_name)
     except Exception:
         await _mark_failed(deployment_id=deployment_id)
+        logging.exception(f"stop container failed")
         raise
 
 
 async def restart_container_task(ctx: dict, deployment_id: int, container_name: str) -> None:
+    logging.info("restart container started")
     try:
         await _restart(deployment_id=deployment_id, container_name=container_name)
     except Exception:
         await _mark_failed(deployment_id=deployment_id)
+        logging.exception(f"restart container failed")
         raise

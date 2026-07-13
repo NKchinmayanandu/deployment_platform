@@ -1,17 +1,3 @@
-"""
-Deployment API routes.
-
-Changes from the Celery version
---------------------------------
-- Import `Request` from FastAPI to access `request.app.state.arq_pool`.
-- Replace every `task.delay(...)` call with
-      `await request.app.state.arq_pool.enqueue_job("function_name", ...)`
-  `enqueue_job` is a coroutine — it must be awaited.
-- The job name string must match the Python function name registered in
-  WorkerSettings.functions (see app/workers/arq_worker.py).
-- No other logic was changed.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +10,7 @@ from app.models.user import User
 from app.repositories.get_deployment import deployment_get_app
 from app.repositories.update_status import update_db_status
 from app.services.deployment import get_deployment_status
-
+import logging
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -35,6 +21,7 @@ async def deploy(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("deploy requested for deployment_id={deployment.id}")
     user = await db.execute(
         select(Application).where(
             Application.owner_id == current_user.id,
@@ -61,6 +48,7 @@ async def deploy(
             image_name,
         )
     except Exception:
+        logging.exception(Exception)
         raise HTTPException(
             status_code=503,
             detail="Unable to queue deployment task.",
@@ -76,6 +64,7 @@ async def stop(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("stop deploy requested for deployment_id={deployment.id}")
     deployment = await deployment_get_app(app_id=app_id, db=db, current_user=current_user)
 
     try:
@@ -100,6 +89,7 @@ async def restart(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info("restart deploy requested for deployment_id={deployment.id}")
     deployment = await deployment_get_app(app_id=app_id, db=db, current_user=current_user)
     await update_db_status(deployment.id, DeploymentStatus.RESTARTING, db)
 
