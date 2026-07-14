@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class ApplicationCreate(BaseModel):
     name: str
     image_name: str
+    environment: dict[str,str] = {}
 
 
 class ApplicationOut(BaseModel):
