@@ -141,3 +141,16 @@ async def remove_container_task(ctx: dict, deployment_id: int, container_name: s
         await _mark_failed(deployment_id=deployment_id)
         logging.exception("remove container task failed")
         raise
+
+
+async def remove_deleted_container_task(ctx: dict, container_name: str) -> None:
+    """
+    Remove a container when the application itself has been deleted.
+    We don't try to update the database status here because the DB record is already gone!
+    """
+    logging.info(f"remove deleted container task for container_name={container_name}")
+    try:
+        await remove_container(container_name)
+    except Exception:
+        logging.exception(f"failed to remove deleted container {container_name}")
+        # we don't re-raise because there's nowhere to report failure to.

@@ -117,7 +117,7 @@ async def start(
 ):
     deployment = await deployment_get_app(app_id=app_id, db=db, current_user=current_user)
     logging.info(f"start deploy requested for deployment_id={deployment.id}")
-    await update_db_status(deployment.id, DeploymentStatus.STARTING, db)
+    await update_db_status(deployment_id=deployment.id,status=DeploymentStatus.STARTING,db=db)
     try:
         await request.app.state.arq_pool.enqueue_job(
             "start_container_task",
@@ -166,12 +166,13 @@ async def deployment_status(
         db=db,
         current_user=current_user,
     )
-@router.get("/deployment/{deployment_id}/logs")
+@router.get("/{app_id}/logs")
 async def deployment_logs(
-    deployment_id:int,
-    db:AsyncSession=Depends(get_db)
+    app_id:int,
+    db:AsyncSession=Depends(get_db),
+    current_user:User=Depends(get_current_user)
 ):
-    deployment = await deployment_get(depolyment_id=deployment_id,db=db)
+    deployment = await deployment_get_app(app_id=app_id, db=db, current_user=current_user)
     logging.info(f"deployment log for deployment_id:{deployment.id}")
 
     container_logs = await asyncio.to_thread(get_container_logs,deployment)

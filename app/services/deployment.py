@@ -10,8 +10,6 @@ async def get_deployment_status(app_id: int,
     deployment = await deployment_get_app(app_id=app_id,
                                     db=db,
                                     current_user=current_user)
-    if deployment is None:
-        return {"message":"app is not deployed"}
     return DeploymentStatusOut.model_validate(deployment)
 
 
@@ -22,7 +20,7 @@ def get_container_logs(deployment):
             stdout=True,
             stderr=True,
             tail=300
-        ).decode("utf-8")
+        ).decode().splitlines()
 
     except NotFound:
-        return "Container does not exist."
+        return ["Container does not exist."]

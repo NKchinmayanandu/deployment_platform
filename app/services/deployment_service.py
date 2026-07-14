@@ -5,19 +5,7 @@ import docker
 from app.db.session import AsyncSessionLocal
 from app.repositories.get_deployment import deployment_get
 import logging
-async def delete_application(container_name:str):
-    loop = asyncio.get_event_loop()
-    def _delete():
-        try:
-            container = client.containers.get(container_name)
-            container.remove(force=True)
-        except docker.errors.NotFound:
-            print(f"Container {container_name} not found, skipping.")
-        except Exception as e:
-            logging.exception(f"Error deleting container {container_name}: {e}")
-            raise e
 
-    await asyncio.to_thread(_delete)
 
 async def run_deployment_logic(deployment_id:int,image_name:str):
     container_name = f"app-{deployment_id}"

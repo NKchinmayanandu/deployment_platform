@@ -5,7 +5,7 @@ from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.application import Application
 from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationOut
-from app.services.deployment_service import delete_application_container
+
 from app.repositories.check_app import check_app
 async def create_application(
     db: AsyncSession, app_in: ApplicationCreate, current_user: User
