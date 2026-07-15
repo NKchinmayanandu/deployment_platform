@@ -9,7 +9,7 @@ class Environment(Base):
     __tablename__ = "environments"
     id: Mapped[int] = mapped_column(primary_key=True)
     application_id: Mapped[int] = mapped_column(
-        ForeignKey("application.id", ondelete="CASCADE")
+        ForeignKey("applications.id", ondelete="CASCADE")
     )
     key: Mapped[str]
     value: Mapped[str]

@@ -12,6 +12,7 @@ from app.repositories.update_status import update_db_status
 from app.services.deployment import get_deployment_status,get_container_logs
 import logging
 import asyncio
+from app.repositories.get_env import env_get
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -23,17 +24,17 @@ async def deploy(
     current_user: User = Depends(get_current_user),
 ):
     logging.info(f"deploy requested for app_id={app_id}")
-    user = await db.execute(
+    app = await db.execute(
         select(Application).where(
             Application.owner_id == current_user.id,
             Application.id == app_id,
         )
     )
-    user = user.scalar_one_or_none()
-    if not user:
+    app = app.scalar_one_or_none()
+    if not app:
         raise HTTPException(status_code=404, detail="application not found")
 
-    image_name = user.image_name
+    image_name = app.image_name
     deployment = Deployment(
         application_id=app_id,
         status=DeploymentStatus.QUEUED,
@@ -41,12 +42,14 @@ async def deploy(
     db.add(deployment)
     await db.commit()
     await db.refresh(deployment)
-
+    env = await env_get(app_id=app_id,db=db)
+    env = {row.key:row.value for row in env}
     try:
         await request.app.state.arq_pool.enqueue_job(
             "deploy_container_task",
             deployment.id,
             image_name,
+            env
         )
     except Exception:
         logging.exception(Exception)

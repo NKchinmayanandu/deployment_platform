@@ -10,3 +10,4 @@ async def check_app(app_id: int, db: AsyncSession):
         .where(Application.id == app_id)
     )
     return app.scalar_one_or_none()
+

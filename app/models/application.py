@@ -7,6 +7,7 @@ from app.db.base import Base
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.models.user import User
+    from app.models.environment_var import Environment
 from app.models.deployment import Deployment
 class Application(Base):
     __tablename__ = "applications"
@@ -20,4 +21,9 @@ class Application(Base):
     owner: Mapped["User"] = relationship(back_populates="applications")
     deployment: Mapped["Deployment | None"] = relationship(
         back_populates="application", cascade="all, delete-orphan", uselist=False
+    )
+    environment_variables: Mapped[list["Environment"]] = relationship(
+        "Environment", 
+        back_populates="application", 
+        cascade="all, delete-orphan"
     )

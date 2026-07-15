@@ -7,7 +7,7 @@ from app.repositories.get_deployment import deployment_get
 import logging
 
 
-async def run_deployment_logic(deployment_id:int,image_name:str):
+async def run_deployment_logic(deployment_id:int,image_name:str, env:dict):
     container_name = f"app-{deployment_id}"
     port = await get_next_port()
     await asyncio.to_thread(client.images.pull,image_name,)
@@ -15,7 +15,8 @@ async def run_deployment_logic(deployment_id:int,image_name:str):
                                         image_name,
                                         detach=True,
                                         name=container_name,
-                                        ports={"80/tcp":port})
+                                        ports={"80/tcp":port},
+                                        environment=env)
     async with AsyncSessionLocal() as db:
         deployment = await deployment_get(deployment_id, db)
         deployment.container_name = container.name

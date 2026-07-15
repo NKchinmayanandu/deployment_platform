@@ -11,10 +11,10 @@ from app.services.deployment_service import (
 import logging
 
 
-async def _deploy(deployment_id: int, image_name: str) -> None:
+async def _deploy(deployment_id: int, image_name: str,env:dict) -> None:
     async with AsyncSessionLocal() as db:
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.DEPLOYING, db=db)
-        await run_deployment_logic(deployment_id=deployment_id, image_name=image_name)
+        await run_deployment_logic(deployment_id=deployment_id, image_name=image_name,env=env)
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.RUNNING, db=db)
 
 
@@ -57,10 +57,10 @@ async def _mark_failed(deployment_id: int) -> None:
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.FAILED, db=db)
 
 
-async def deploy_container_task(ctx: dict, deployment_id: int, image_name: str) -> None:
+async def deploy_container_task(ctx: dict, deployment_id: int, image_name: str, env:dict) -> None:
     logging.info("deploy container started")
     try:
-        await _deploy(deployment_id=deployment_id, image_name=image_name)
+        await _deploy(deployment_id=deployment_id, image_name=image_name,env=env)
     except Exception:
         await _mark_failed(deployment_id=deployment_id)
         logging.exception(f"deploy container failed")
@@ -98,7 +98,7 @@ async def _start(deployment_id: int, container_name: str) -> None:
                 status=DeploymentStatus.RUNNING,
                 db=db,
             )
-        elif ok:  # reason == "started"
+        elif ok:  
             await update_db_status(
                 deployment_id=deployment_id,
                 status=DeploymentStatus.RUNNING,
@@ -144,13 +144,8 @@ async def remove_container_task(ctx: dict, deployment_id: int, container_name: s
 
 
 async def remove_deleted_container_task(ctx: dict, container_name: str) -> None:
-    """
-    Remove a container when the application itself has been deleted.
-    We don't try to update the database status here because the DB record is already gone!
-    """
     logging.info(f"remove deleted container task for container_name={container_name}")
     try:
         await remove_container(container_name)
     except Exception:
         logging.exception(f"failed to remove deleted container {container_name}")
-        # we don't re-raise because there's nowhere to report failure to.

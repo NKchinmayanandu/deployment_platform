@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { useCreateApplication } from '../hooks/useDeployments';
+import { EnvVarsEditor, useEnvVars } from './EnvVarsEditor';
 
 interface CreateAppModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ export function CreateAppModal({ onClose }: CreateAppModalProps) {
   const [name, setName] = useState('');
   const [imageName, setImageName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { vars, setVars, toJSON } = useEnvVars();
 
   const mutation = useCreateApplication();
 
@@ -23,7 +25,11 @@ export function CreateAppModal({ onClose }: CreateAppModalProps) {
     }
 
     try {
-      await mutation.mutateAsync({ name: name.trim(), image_name: imageName.trim() });
+      await mutation.mutateAsync({
+        name: name.trim(),
+        image_name: imageName.trim(),
+        env_vars: toJSON(),          // { "KEY": "VALUE", … }
+      });
       onClose();
     } catch (err: unknown) {
       const msg =
@@ -42,7 +48,7 @@ export function CreateAppModal({ onClose }: CreateAppModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative card w-full max-w-md p-8 z-10">
+      <div className="relative card w-full max-w-xl p-8 z-10">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-[22px] font-normal tracking-[-0.11px] leading-[1.3] text-ink">
@@ -87,6 +93,11 @@ export function CreateAppModal({ onClose }: CreateAppModalProps) {
               value={imageName}
               onChange={(e) => setImageName(e.target.value)}
             />
+          </div>
+
+          {/* ── Environment Variables ── */}
+          <div className="border-t border-hairline pt-5">
+            <EnvVarsEditor vars={vars} onChange={setVars} />
           </div>
 
           {error && (
