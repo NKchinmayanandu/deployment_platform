@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.application import Application
 from app.models.deployment import Deployment, DeploymentStatus
 from app.models.user import User
-from app.repositories.get_deployment import deployment_get_app,deployment_get
+from app.repositories.get_deployment import deployment_get_app,deployment_get_app_none
 from app.repositories.update_status import update_db_status
 from app.services.deployment import get_deployment_status,get_container_logs
 import logging
@@ -26,24 +26,38 @@ async def deploy(
 ):
     logging.info(f"deploy requested for app_id={app_id}")
     app = await get_application(app_id=app_id,db=db,current_user=current_user)
-
-    image_name = app.image_name
-    deployment = Deployment(
+    logging.info("got the application")
+    deployment = await deployment_get_app_none(app_id=app_id,db=db,current_user=current_user)
+    if deployment is None:
+        logging.info("deployment not found")
+        deployment = Deployment(
         application_id=app_id,
         status=DeploymentStatus.QUEUED,
-    )
-    db.add(deployment)
+        )
+        db.add(deployment)
+        await db.commit()
+        await db.refresh(deployment)
+    else:
+        deployment.status = DeploymentStatus.QUEUED
+        deployment.container_id = None
+        deployment.container_name = None
+        deployment.host_port = None
+        deployment.deployment_url = None
     await db.commit()
-    await db.refresh(deployment)
+    await db.refresh(deployment) 
+    logging.info("commited to the db")  
+    image_name = app.image_name
     env = await env_get(app_id=app_id,db=db)
     env = {row.key:row.value for row in env}
+    logging.info("About to enqueue deploy")
     try:
-        await request.app.state.arq_pool.enqueue_job(
+        job = await request.app.state.arq_pool.enqueue_job(
             "deploy_container_task",
             deployment.id,
             image_name,
             env
         )
+        logging.info(f"Deploy job: {job}")
     except Exception:
         logging.exception(Exception)
         raise HTTPException(

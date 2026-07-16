@@ -27,3 +27,4 @@ class Application(Base):
         back_populates="application", 
         cascade="all, delete-orphan"
     )
+    container_port : Mapped[int] = mapped_column(default=8000)

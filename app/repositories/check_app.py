@@ -12,15 +12,19 @@ async def check_app(app_id: int, db: AsyncSession):
     )
     return app.scalar_one_or_none()
 
-async def get_application(app_id:int,db:AsyncSession,current_user:User):
-    app = await db.execute(
+async def get_application(app_id: int, db: AsyncSession, current_user: User):
+    result = await db.execute(
         select(Application)
         .options(selectinload(Application.deployment))
         .where(Application.id == app_id)
     )
-    if not app.scalar_one_or_none():
+
+    app = result.scalar_one_or_none()
+
+    if app is None:
         raise NotFoundError(detail="application not found")
 
-    if app.owner_id != current_user:
+    if app.owner_id != current_user.id:
         raise UnauthorizedError(detail="u are not allowed")
-    return app 
+
+    return app

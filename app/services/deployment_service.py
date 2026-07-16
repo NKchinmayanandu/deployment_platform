@@ -8,27 +8,31 @@ import logging
 
 
 async def run_deployment_logic(deployment_id:int,image_name:str, env:dict):
-    container_name = f"app-{deployment_id}"
-    port = await get_next_port()
-    await asyncio.to_thread(client.images.pull,image_name,)
-    container = await asyncio.to_thread(client.containers.run,
-                                        image_name,
-                                        detach=True,
-                                        name=container_name,
-                                        extra_hosts={
-                                            "host.docker.internal": "host-gateway"
-                                                    },
-                                        ports={"80/tcp":port},
-                                        environment=env)
-    async with AsyncSessionLocal() as db:
-        deployment = await deployment_get(deployment_id, db)
-        deployment.container_name = container.name
-        deployment.container_id = container.id
-        deployment.host_port = port
-        deployment.deployment_url = f"http://localhost:{port}"
-        await db.commit()
-
-    return None
+    try:
+        container_name = f"app-{deployment_id}"
+        port = await get_next_port()
+        await asyncio.to_thread(client.images.pull,image_name,)
+        container = await asyncio.to_thread(client.containers.run,
+                                            image_name,
+                                            detach=True,
+                                            name=container_name,
+                                            extra_hosts={
+                                                "host.docker.internal": "host-gateway"
+                                                        },
+                                            ports={"8000/tcp":port},
+                                            environment=env)
+        async with AsyncSessionLocal() as db:
+            deployment = await deployment_get(deployment_id, db)
+            deployment.container_name = container.name
+            deployment.container_id = container.id
+            deployment.host_port = port
+            deployment.deployment_url = f"http://localhost:{port}"
+            await db.commit()
+        logging.info("Deployment committed")
+        return None
+    except Exception:
+        logging.exception("deployment failed")
+        raise
 
 from docker.errors import NotFound
 

@@ -18,9 +18,11 @@ configure_mappers()
 
 
 async def _deploy(deployment_id: int, image_name: str,env:dict) -> None:
+    logging.info("_deploy has started ")
     async with AsyncSessionLocal() as db:
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.DEPLOYING, db=db)
         await run_deployment_logic(deployment_id=deployment_id, image_name=image_name,env=env)
+        logging.info("ran the run deployment")
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.RUNNING, db=db)
 
 
@@ -67,6 +69,7 @@ async def deploy_container_task(ctx: dict, deployment_id: int, image_name: str, 
     logging.info("deploy container started")
     try:
         await _deploy(deployment_id=deployment_id, image_name=image_name,env=env)
+        logging.info("_deploy worked")
     except Exception:
         await _mark_failed(deployment_id=deployment_id)
         logging.exception(f"deploy container failed")

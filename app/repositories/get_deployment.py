@@ -31,3 +31,18 @@ async def deployment_get_app(app_id: int, db: AsyncSession, current_user: User):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="you have not deployed")
         
     return deployment
+async def deployment_get_app_none(app_id:int,db:AsyncSession,current_user:User):
+    app_check = await db.execute(
+        select(Application)
+        .where(Application.id == app_id, Application.owner_id == current_user.id)
+    )
+    if not app_check.scalar_one_or_none():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Application not found or access denied")
+    result = await db.execute(
+        select(Deployment)
+        .where(
+            Deployment.application_id == app_id
+        )
+    )
+    result = result.scalar_one_or_none()
+    return result
