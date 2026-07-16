@@ -17,11 +17,11 @@ import app.models.environment_var
 configure_mappers()
 
 
-async def _deploy(deployment_id: int, image_name: str,env:dict) -> None:
+async def _deploy(deployment_id: int, image_name: str,env:dict, container_port:int) -> None:
     logging.info("_deploy has started ")
     async with AsyncSessionLocal() as db:
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.DEPLOYING, db=db)
-        await run_deployment_logic(deployment_id=deployment_id, image_name=image_name,env=env)
+        await run_deployment_logic(deployment_id=deployment_id, image_name=image_name,env=env,container_port=container_port)
         logging.info("ran the run deployment")
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.RUNNING, db=db)
 
@@ -65,10 +65,10 @@ async def _mark_failed(deployment_id: int) -> None:
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.FAILED, db=db)
 
 
-async def deploy_container_task(ctx: dict, deployment_id: int, image_name: str, env:dict) -> None:
+async def deploy_container_task(ctx: dict, deployment_id: int, image_name: str, env:dict, container_port:int) -> None:
     logging.info("deploy container started")
     try:
-        await _deploy(deployment_id=deployment_id, image_name=image_name,env=env)
+        await _deploy(deployment_id=deployment_id, image_name=image_name,env=env,container_port=container_port)
         logging.info("_deploy worked")
     except Exception:
         await _mark_failed(deployment_id=deployment_id)

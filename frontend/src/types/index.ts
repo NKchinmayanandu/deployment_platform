@@ -14,6 +14,7 @@ export interface Application {
   owner_id: number;
   name: string;
   image_name: string;
+  container_port?: number;
   created_at: string;
 }
 
@@ -36,4 +37,6 @@ export interface LoginResponse {
 export interface ApplicationCreate {
   name: string;
   image_name: string;
+  container_port: number;
+  env_vars?: Record<string, string>;
 }

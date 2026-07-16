@@ -7,6 +7,7 @@ class ApplicationCreate(BaseModel):
     name: str
     image_name: str
     environment: dict[str,str] = {}
+    container_port:int=8000
 
 
 class ApplicationOut(BaseModel):

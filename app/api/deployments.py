@@ -47,6 +47,7 @@ async def deploy(
     await db.refresh(deployment) 
     logging.info("commited to the db")  
     image_name = app.image_name
+    container_port = app.container_port
     env = await env_get(app_id=app_id,db=db)
     env = {row.key:row.value for row in env}
     logging.info("About to enqueue deploy")
@@ -55,7 +56,8 @@ async def deploy(
             "deploy_container_task",
             deployment.id,
             image_name,
-            env
+            env,
+            container_port
         )
         logging.info(f"Deploy job: {job}")
     except Exception:

@@ -7,7 +7,7 @@ from app.repositories.get_deployment import deployment_get
 import logging
 
 
-async def run_deployment_logic(deployment_id:int,image_name:str, env:dict):
+async def run_deployment_logic(deployment_id:int,image_name:str, env:dict, container_port:int):
     try:
         container_name = f"app-{deployment_id}"
         port = await get_next_port()
@@ -19,7 +19,7 @@ async def run_deployment_logic(deployment_id:int,image_name:str, env:dict):
                                             extra_hosts={
                                                 "host.docker.internal": "host-gateway"
                                                         },
-                                            ports={"8000/tcp":port},
+                                            ports={f"{container_port}/tcp":port},
                                             environment=env)
         async with AsyncSessionLocal() as db:
             deployment = await deployment_get(deployment_id, db)
