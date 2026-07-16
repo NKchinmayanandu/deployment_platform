@@ -10,6 +10,12 @@ from app.services.deployment_service import (
 )
 import logging
 
+from sqlalchemy.orm import configure_mappers
+
+import app.models.environment_var
+
+configure_mappers()
+
 
 async def _deploy(deployment_id: int, image_name: str,env:dict) -> None:
     async with AsyncSessionLocal() as db:

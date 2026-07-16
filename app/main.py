@@ -11,15 +11,19 @@ from app.core.config import settings
 from app.utils.logging import setup_logging
 
 
+from arq.connections import RedisSettings, create_pool
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
 
-    arq_redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
-    app.state.arq_pool = await create_pool(arq_redis_settings)
+    app.state.arq_pool = await create_pool(
+        RedisSettings.from_dsn(settings.REDIS_URL)
+    )
 
     yield
-    await app.state.arq_pool.close()
+
+    await app.state.arq_pool.aclose()
 
 
 app = FastAPI(

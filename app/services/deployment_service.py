@@ -15,6 +15,9 @@ async def run_deployment_logic(deployment_id:int,image_name:str, env:dict):
                                         image_name,
                                         detach=True,
                                         name=container_name,
+                                        extra_hosts={
+                                            "host.docker.internal": "host-gateway"
+                                                    },
                                         ports={"80/tcp":port},
                                         environment=env)
     async with AsyncSessionLocal() as db:

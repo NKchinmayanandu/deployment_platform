@@ -13,6 +13,7 @@ from app.services.deployment import get_deployment_status,get_container_logs
 import logging
 import asyncio
 from app.repositories.get_env import env_get
+from app.repositories.check_app import get_application
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -24,15 +25,7 @@ async def deploy(
     current_user: User = Depends(get_current_user),
 ):
     logging.info(f"deploy requested for app_id={app_id}")
-    app = await db.execute(
-        select(Application).where(
-            Application.owner_id == current_user.id,
-            Application.id == app_id,
-        )
-    )
-    app = app.scalar_one_or_none()
-    if not app:
-        raise HTTPException(status_code=404, detail="application not found")
+    app = await get_application(app_id=app_id,db=db,current_user=current_user)
 
     image_name = app.image_name
     deployment = Deployment(
@@ -122,16 +115,16 @@ async def start(
     logging.info(f"start deploy requested for deployment_id={deployment.id}")
     await update_db_status(deployment_id=deployment.id,status=DeploymentStatus.STARTING,db=db)
     try:
-        await request.app.state.arq_pool.enqueue_job(
+        job = await request.app.state.arq_pool.enqueue_job(
             "start_container_task",
             deployment_id=deployment.id,
             container_name=deployment.container_name,
         )
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="Unable to queue start task.",
-        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(e)
+        raise
     return {"message": "deployment is starting"}
 
 
