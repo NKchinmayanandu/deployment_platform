@@ -69,10 +69,8 @@ export function AppCard({ app, onDelete }: AppCardProps) {
     deployMutation.isPending || stopMutation.isPending ||
     startMutation.isPending || restartMutation.isPending;
 
-  // URL — only show as clickable when RUNNING
-  const deployUrl =
-    deployStatus?.url ??
-    (deployStatus?.host_port ? `http://localhost:${deployStatus.host_port}` : null);
+  // URL — sourced entirely from the backend; only shown as a link when RUNNING
+  const deployUrl = deployStatus?.url ?? null;
 
   const formattedDate = new Date(app.created_at).toLocaleDateString('en-US', {
     month: 'short',
