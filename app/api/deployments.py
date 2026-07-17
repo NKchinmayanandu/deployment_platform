@@ -13,7 +13,7 @@ from app.services.deployment import get_deployment_status,get_container_logs
 import logging
 import asyncio
 from app.repositories.get_env import env_get
-from app.repositories.check_app import get_application
+from app.repositories.check_app import get_app
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -25,7 +25,7 @@ async def deploy(
     current_user: User = Depends(get_current_user),
 ):
     logging.info(f"deploy requested for app_id={app_id}")
-    app = await get_application(app_id=app_id,db=db,current_user=current_user)
+    app = await get_app(app_id=app_id,db=db,current_user=current_user)
     logging.info("got the application")
     deployment = await deployment_get_app_none(app_id=app_id,db=db,current_user=current_user)
     if deployment is None:

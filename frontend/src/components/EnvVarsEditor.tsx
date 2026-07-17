@@ -30,11 +30,21 @@ function createRow(): EnvVar {
  *   const payload = toEnvObject(vars);
  *   // => { "PORT": "8080", "DEBUG": "true" }
  */
+/**
+ * Sanitises an env var key:
+ *   - trims surrounding whitespace
+ *   - strips any trailing `=` characters
+ *     (guards against users typing "DATABASE_URL=" as if it were a .env line)
+ */
+function sanitiseKey(raw: string): string {
+  return raw.trim().replace(/=+$/, '').toUpperCase();
+}
+
 export function toEnvObject(vars: EnvVar[]): Record<string, string> {
   return Object.fromEntries(
     vars
-      .filter((v) => v.key.trim() !== '')          // skip blank keys
-      .map((v) => [v.key.trim(), v.value.trim()])
+      .filter((v) => sanitiseKey(v.key) !== '')          // skip blank keys
+      .map((v) => [sanitiseKey(v.key), v.value.trim()])
   );
 }
 
@@ -54,7 +64,10 @@ export function EnvVarsEditor({ vars, onChange }: EnvVarsEditorProps) {
 
   const updateField = useCallback(
     (id: string, field: 'key' | 'value', text: string) => {
-      onChange(vars.map((v) => (v.id === id ? { ...v, [field]: text } : v)));
+      // Sanitise keys on input so trailing `=` is stripped live.
+      // Values are kept verbatim (they may contain `=`, e.g. base64 tokens).
+      const sanitised = field === 'key' ? sanitiseKey(text) : text;
+      onChange(vars.map((v) => (v.id === id ? { ...v, [field]: sanitised } : v)));
     },
     [vars, onChange]
   );

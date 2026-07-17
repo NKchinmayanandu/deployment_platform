@@ -7,15 +7,18 @@ from app.models.user import User
 from app.schemas.application import ApplicationCreate, ApplicationOut
 from app.models.environment_var import Environment
 from app.repositories.check_app import check_app
+import logging
 async def create_application(
     db: AsyncSession, app_in: ApplicationCreate, current_user: User
 ) -> ApplicationOut:
-    
+    logging.info(app_in.container_port)
     application = Application(
         owner_id=current_user.id,
         name=app_in.name,
         image_name=app_in.image_name,
+        container_port = app_in.container_port
     )
+    logging.info(application.container_port)
     db.add(application)
     await db.flush()
     for key,value in app_in.environment.items():
@@ -28,7 +31,7 @@ async def create_application(
             )  
     await db.commit()
     await db.refresh(application)
-
+    logging.info(application.container_port)
     return ApplicationOut.model_validate(application)
 
 

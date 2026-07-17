@@ -60,7 +60,7 @@ export function CreateAppModal({ onClose }: CreateAppModalProps) {
         name: name.trim(),
         image_name: imageName.trim(),
         container_port: parseInt(containerPort, 10), // ← sent as integer to FastAPI
-        env_vars: toJSON(),
+        environment: toJSON(),
       });
       onClose();
     } catch (err: unknown) {

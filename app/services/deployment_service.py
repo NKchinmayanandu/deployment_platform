@@ -28,7 +28,7 @@ async def run_deployment_logic(deployment_id:int,image_name:str, env:dict, conta
             deployment.host_port = port
             deployment.deployment_url = f"http://localhost:{port}"
             await db.commit()
-        logging.info("Deployment committed")
+        logging.info("Deployment committed to the db")
         return None
     except Exception:
         logging.exception("deployment failed")

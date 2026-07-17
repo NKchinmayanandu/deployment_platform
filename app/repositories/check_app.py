@@ -28,3 +28,17 @@ async def get_application(app_id: int, db: AsyncSession, current_user: User):
         raise UnauthorizedError(detail="u are not allowed")
 
     return app
+
+async def get_app(app_id:int,db:AsyncSession,current_user:User):
+    app = await db.execute(
+        select(Application).where(Application.id==app_id))
+
+    app = app.scalar_one_or_none()
+
+    if app is None:
+        raise NotFoundError(detail="application not found")
+
+    if app.owner_id != current_user.id:
+        raise UnauthorizedError(detail="u are not allowed")
+
+    return app

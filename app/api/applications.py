@@ -21,6 +21,7 @@ async def create(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    logging.info(app_in.model_dump())
     logging.info("create app requested")
     return await create_application(db, app_in, current_user)
 
