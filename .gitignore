@@ -4,6 +4,11 @@ __pycache__/
 
 # Env
 .env
+.env.benchmark
+
+# Performance test outputs (raw k6 JSON — can be large)
+performance/reports/raw/
+performance/reports/results/
 
 # Virtual env
 .venv/
