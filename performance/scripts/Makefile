@@ -241,76 +241,43 @@ app-health: ## Check if the FastAPI app is responding
 # K6 TEST TARGETS
 # =============================================================================
 
-smoke: ## Smoke test — quick correctness check (1-3 VUs, ~2 min)
+# K6 binary + shared args
+K6_RUN = $(K6) run \
+	--env BASE_URL=$(BASE_URL) \
+	--env API_PREFIX=$(API_PREFIX) \
+	--env SEED_USERS=$(or $(SEED_USERS),10000)
+
+K6_SCRIPT = $(PERF_DIR)/k6/benchmark.js
+
+smoke: ## Smoke test — correctness check, 2 VUs, ~2 min
 	@echo "$(CYAN)▶ Running smoke test...$(RESET)"
 	@mkdir -p $(REPORTS_DIR)
-	BASE_URL=$(BASE_URL) API_PREFIX=$(API_PREFIX) \
-	$(K6) run \
-		--out json=$(REPORTS_DIR)/smoke_$(TIMESTAMP).json \
-		$(PERF_DIR)/k6/scenarios/smoke_test.js
+	$(K6_RUN) --env SCENARIO=smoke --out json=$(REPORTS_DIR)/smoke_$(TIMESTAMP).json $(K6_SCRIPT)
 
-load: ## Load test — steady-state benchmarking (default: 100 users, ~30 min)
-	@echo "$(CYAN)▶ Running load test [profile: $(LOAD_PROFILE)]...$(RESET)"
+load: ## Load test — steady-state ramp to 100 VUs, ~18 min
+	@echo "$(CYAN)▶ Running load test...$(RESET)"
 	@mkdir -p $(REPORTS_DIR)
-	BASE_URL=$(BASE_URL) API_PREFIX=$(API_PREFIX) LOAD_PROFILE=$(LOAD_PROFILE) \
-	$(K6) run \
-		--out json=$(REPORTS_DIR)/load_$(TIMESTAMP).json \
-		$(PERF_DIR)/k6/scenarios/load_test.js
+	$(K6_RUN) --env SCENARIO=load --out json=$(REPORTS_DIR)/load_$(TIMESTAMP).json $(K6_SCRIPT)
 
-stress: ## Stress test — find breaking point (ramps to 5000 VUs)
+stress: ## Stress test — ramp to 1000 VUs, find breaking point
 	@echo "$(CYAN)▶ Running stress test...$(RESET)"
 	@mkdir -p $(REPORTS_DIR)
-	BASE_URL=$(BASE_URL) API_PREFIX=$(API_PREFIX) \
-	$(K6) run \
-		--out json=$(REPORTS_DIR)/stress_$(TIMESTAMP).json \
-		$(PERF_DIR)/k6/scenarios/stress_test.js
+	$(K6_RUN) --env SCENARIO=stress --out json=$(REPORTS_DIR)/stress_$(TIMESTAMP).json $(K6_SCRIPT)
 
-spike: ## Spike test — sudden burst traffic (10 → 2000 VUs instantly)
+spike: ## Spike test — burst from 10 → 500 VUs in 10s
 	@echo "$(CYAN)▶ Running spike test...$(RESET)"
 	@mkdir -p $(REPORTS_DIR)
-	BASE_URL=$(BASE_URL) API_PREFIX=$(API_PREFIX) \
-	$(K6) run \
-		--out json=$(REPORTS_DIR)/spike_$(TIMESTAMP).json \
-		$(PERF_DIR)/k6/scenarios/spike_test.js
+	$(K6_RUN) --env SCENARIO=spike --out json=$(REPORTS_DIR)/spike_$(TIMESTAMP).json $(K6_SCRIPT)
 
-soak: ## Soak test — 100 VUs for 60 min (memory leak / endurance)
+soak: ## Soak test — 50 VUs for 60 min (memory / endurance)
 	@echo "$(CYAN)▶ Running soak test (60 min)...$(RESET)"
 	@mkdir -p $(REPORTS_DIR)
-	BASE_URL=$(BASE_URL) API_PREFIX=$(API_PREFIX) \
-	$(K6) run \
-		--out json=$(REPORTS_DIR)/soak_$(TIMESTAMP).json \
-		$(PERF_DIR)/k6/scenarios/soak_test.js
+	$(K6_RUN) --env SCENARIO=soak --out json=$(REPORTS_DIR)/soak_$(TIMESTAMP).json $(K6_SCRIPT)
 
-run-all: ## Run all 5 test scenarios in sequence (smoke → load → stress → spike → soak)
+run-all: ## Run all 5 scenarios in sequence (smoke → load → stress → spike → soak)
 	@echo "$(BOLD)$(CYAN)▶ Running all scenarios in sequence...$(RESET)"
-	@$(MAKE) smoke && \
-	$(MAKE) load && \
-	$(MAKE) stress && \
-	$(MAKE) spike && \
-	$(MAKE) soak
+	$(MAKE) smoke && $(MAKE) load && $(MAKE) stress && $(MAKE) spike && $(MAKE) soak
 	@echo "$(GREEN)$(BOLD)✓ All scenarios complete!$(RESET)"
-
-# Custom load profile shortcuts
-load-10:    LOAD_PROFILE=10_users
-load-10:    load    ## Load test with 10 VUs
-
-load-50:    LOAD_PROFILE=50_users
-load-50:    load    ## Load test with 50 VUs
-
-load-250:   LOAD_PROFILE=250_users
-load-250:   load    ## Load test with 250 VUs
-
-load-500:   LOAD_PROFILE=500_users
-load-500:   load    ## Load test with 500 VUs
-
-load-1000:  LOAD_PROFILE=1000_users
-load-1000:  load    ## Load test with 1000 VUs
-
-load-2000:  LOAD_PROFILE=2000_users
-load-2000:  load    ## Load test with 2000 VUs
-
-load-5000:  LOAD_PROFILE=5000_users
-load-5000:  load    ## Load test with 5000 VUs
 
 # =============================================================================
 # REPORTING

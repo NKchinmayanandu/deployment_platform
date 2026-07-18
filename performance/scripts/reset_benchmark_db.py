@@ -103,7 +103,7 @@ def ensure_container_running(container: str) -> None:
 TABLES_IN_DEPENDENCY_ORDER = [
     # Leaf tables first (have FK to parent tables)
     "deployments",
-    "environment_variables",   # FK → applications
+    "environments",            # FK → applications
     "applications",            # FK → users
     "users",
 ]

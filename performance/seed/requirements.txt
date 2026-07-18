@@ -1,0 +1,6 @@
+# performance/seed/requirements.txt
+# Install with: pip install -r performance/seed/requirements.txt
+# Or just: pip install asyncpg bcrypt  (both are likely already in your .venv)
+
+asyncpg>=0.29
+bcrypt>=4.0

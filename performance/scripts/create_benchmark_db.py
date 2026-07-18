@@ -71,7 +71,7 @@ def load_benchmark_env() -> dict:
 
 # ─── Docker Helpers ───────────────────────────────────────────────────────────
 
-def run(cmd: list[str], check: bool = True, capture: bool = False) -> subprocess.CompletedProcess:
+def run(cmd: list[str], check: bool = True, capture: bool = False, env: dict = None) -> subprocess.CompletedProcess:
     """Run a shell command with clear output. Exits on failure if check=True."""
     print(f"  $ {' '.join(cmd)}")
     return subprocess.run(
@@ -79,6 +79,7 @@ def run(cmd: list[str], check: bool = True, capture: bool = False) -> subprocess
         check=check,
         capture_output=capture,
         text=True,
+        env=env,       # None means inherit current environment (default behaviour)
     )
 
 
@@ -143,7 +144,8 @@ def create_db_and_user(cfg: dict) -> None:
     user = cfg["BENCHMARK_USER"]
     password = cfg["BENCHMARK_PASSWORD"]
 
-    # Create the role if it doesn't already exist
+    # Step 1: Create the role if it doesn't already exist.
+    # DO $$ ... $$ is valid SQL — works fine with psql -c.
     create_role_sql = (
         f"DO $$ BEGIN "
         f"  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{user}') THEN "
@@ -151,21 +153,34 @@ def create_db_and_user(cfg: dict) -> None:
         f"  END IF; "
         f"END $$;"
     )
+    run(["docker", "exec", container, "psql", "-U", "postgres", "-c", create_role_sql])
 
-    # Create the database if it doesn't already exist
-    create_db_sql = (
-        f"SELECT 'CREATE DATABASE {db} OWNER {user}' "
-        f"WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{db}') \\gexec"
+    # Step 2: Create the database only if it doesn't already exist.
+    # \gexec is a psql META-COMMAND — it only works inside an interactive psql
+    # session or a script file passed via -f. It is NOT valid SQL and psql -c
+    # sends input straight to the server, which rejects it with a syntax error.
+    # Fix: check existence first with a SELECT, then CREATE conditionally.
+    check_db = run(
+        [
+            "docker", "exec", container,
+            "psql", "-U", "postgres",
+            "-tAc",                             # -t: tuples only, -A: unaligned, -c: command
+            f"SELECT 1 FROM pg_database WHERE datname='{db}'",
+        ],
+        capture=True,
     )
-
-    # Grant all privileges on the database to bench_user
-    grant_sql = f"GRANT ALL PRIVILEGES ON DATABASE {db} TO {user};"
-
-    for sql in [create_role_sql, create_db_sql, grant_sql]:
+    if check_db.stdout.strip() != "1":
         run([
             "docker", "exec", container,
-            "psql", "-U", "postgres", "-c", sql
+            "psql", "-U", "postgres",
+            "-c", f"CREATE DATABASE {db} OWNER {user};",
         ])
+    else:
+        print(f"  [SKIP] Database '{db}' already exists.")
+
+    # Step 3: Grant privileges (idempotent — safe to re-run).
+    grant_sql = f"GRANT ALL PRIVILEGES ON DATABASE {db} TO {user};"
+    run(["docker", "exec", container, "psql", "-U", "postgres", "-c", grant_sql])
 
     print(f"[OK]   Database '{db}' and user '{user}' are ready.")
 
@@ -185,26 +200,30 @@ def run_alembic_migrations(cfg: dict) -> None:
     """
     print("\n[INFO] Running Alembic migrations against benchmark database...")
 
-    # Build the sync psycopg2 URL (alembic uses sync driver)
+    # Build the sync psycopg2 URL (alembic uses the sync driver)
     async_url = cfg["DATABASE_URL"]
     sync_url = async_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
 
+    # Derive the alembic binary from the same Python that's running this script.
+    # sys.executable = /path/to/.venv/bin/python → alembic = /path/to/.venv/bin/alembic
+    # This avoids "alembic not found" when the venv isn't activated in the shell.
+    venv_bin = Path(sys.executable).parent
+    alembic_bin = venv_bin / "alembic"
+    if not alembic_bin.exists():
+        # Fallback: try the system alembic
+        alembic_bin = "alembic"
+
+    # Override DATABASE_URL in the subprocess environment.
+    # pydantic-settings gives os.environ priority over the .env file,
+    # so this safely redirects alembic to the benchmark DB without
+    # touching or modifying the .env file (which points to Supabase).
     env = os.environ.copy()
-    env["DATABASE_URL"] = async_url  # pydantic-settings reads this
+    env["DATABASE_URL"] = async_url  # asyncpg URL — alembic/env.py converts to psycopg2
 
-    # Override alembic's sqlalchemy.url directly via -x flag
-    result = run([
-        "alembic",
-        "-x", f"db_url={sync_url}",
-        "upgrade", "head",
-    ], check=False)
-
-    if result.returncode != 0:
-        # If -x flag isn't supported by their alembic env.py, fall back to env var
-        print("[WARN] -x flag approach failed. Falling back to DATABASE_URL env override...")
-        run(
-            ["alembic", "upgrade", "head"],
-        )
+    run(
+        [str(alembic_bin), "upgrade", "head"],
+        env=env,
+    )
 
     print("[OK]   Migrations applied successfully.")
 
@@ -249,13 +268,23 @@ def main():
     # ── Step 1: Handle existing container ────────────────────────────────────
     if container_exists(container):
         if args.force:
+            # Remove so docker run below can recreate it cleanly
             print(f"\n[INFO] --force: Removing existing container '{container}'...")
             run(["docker", "stop", container], check=False)
             run(["docker", "rm", container], check=False)
+            # Falls through to Step 2 (pull + run)
+
         elif container_running(container):
-            print(f"\n[OK]   Container '{container}' already running. Skipping creation.")
-            print("       Use --force to recreate it from scratch.")
+            # Already up — ensure DB/user exist then run migrations
+            print(f"\n[OK]   Container '{container}' already running.")
+            create_db_and_user(cfg)
+            if not args.skip_migrations:
+                run_alembic_migrations(cfg)
+            print("\n[DONE] Benchmark database is ready.")
+            return
+
         else:
+            # Exists but stopped — restart it
             print(f"\n[INFO] Container '{container}' exists but is stopped. Starting it...")
             run(["docker", "start", container])
             wait_for_postgres(host, port, "postgres")
@@ -265,7 +294,7 @@ def main():
             print("\n[DONE] Benchmark database is ready.")
             return
 
-    # ── Step 2: Pull image ────────────────────────────────────────────────────
+    # ── Step 2: Pull image (only reached for new containers or --force) ───────
     print(f"\n[INFO] Pulling Docker image: {pg_image}")
     run(["docker", "pull", pg_image])
 
