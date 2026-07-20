@@ -7,32 +7,63 @@ from app.repositories.get_deployment import deployment_get
 import logging
 
 
-async def run_deployment_logic(deployment_id:int,image_name:str, env:dict, container_port:int):
+import asyncio
+import logging
+
+async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, container_port: int):
+    container_name = f"app-{deployment_id}"
+    container = None
     try:
-        container_name = f"app-{deployment_id}"
         port = await get_next_port()
-        await asyncio.to_thread(client.images.pull,image_name,)
-        container = await asyncio.to_thread(client.containers.run,
-                                            image_name,
-                                            detach=True,
-                                            name=container_name,
-                                            extra_hosts={
-                                                "host.docker.internal": "host-gateway"
-                                                        },
-                                            ports={f"{container_port}/tcp":port},
-                                            environment=env)
-        async with AsyncSessionLocal() as db:
-            deployment = await deployment_get(deployment_id, db)
-            deployment.container_name = container.name
-            deployment.container_id = container.id
-            deployment.host_port = port
-            deployment.deployment_url = f"http://localhost:{port}"
-            await db.commit()
-        logging.info("Deployment committed to the db")
-        return None
-    except Exception:
-        logging.exception("deployment failed")
+        await asyncio.to_thread(client.images.pull, image_name)
+        container = await asyncio.to_thread(
+            client.containers.run,
+            image_name,
+            detach=True,
+            name=container_name,
+            extra_hosts={
+                "host.docker.internal": "host-gateway"
+            },
+            ports={f"{container_port}/tcp": port},
+            environment=env
+        )
+        max_retries = 3
+        db_success = False
+        
+        for attempt in range(1, max_retries + 1):
+            try:
+                async with AsyncSessionLocal() as db:
+                    deployment = await deployment_get(deployment_id, db)
+                    deployment.container_name = container.name
+                    deployment.container_id = container.id
+                    deployment.host_port = port
+                    deployment.deployment_url = f"http://localhost:{port}"
+                    await db.commit()
+                
+                db_success = True
+                break 
+                
+            except Exception as db_error:
+                logging.warning(f"DB update attempt {attempt}/{max_retries} failed: {db_error}")
+                if attempt == max_retries:
+                    raise  
+                await asyncio.sleep(1)
+                
+        if db_success:
+            logging.info("Deployment committed to the db successfully")
+            return None
+
+    except Exception as e:
+        logging.exception("Deployment failed completely after retries. Cleaning up container...")
+        if container is not None:
+            try:
+                await asyncio.to_thread(container.remove, force=True)
+                logging.info(f"Cleaned up unused container: {container_name}")
+            except Exception as cleanup_error:
+                logging.error(f"Failed to cleanup container {container_name}: {cleanup_error}")
+                
         raise
+    
 
 from docker.errors import NotFound
 
