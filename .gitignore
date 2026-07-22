@@ -22,3 +22,6 @@ performance/reports/results/
 
 # SQLite (if any)
 *.db
+
+# Docker / Traefik
+acme.json

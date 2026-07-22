@@ -1,19 +1,111 @@
+################################################################################
+# docker-compose.yml
+#
+# Architecture:
+#   Cloudflare → Tunnel (cloudflared) → Traefik → backend (FastAPI + ARQ)
+#
+# Redis  : on the HOST machine (host.docker.internal:6379)
+# Database: Supabase (external, no container)
+#
+# One-time setup:
+#   docker network create proxy
+#   cp .env.example .env && nano .env
+#   docker compose up -d --build
+################################################################################
+
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: deployment_platform
+  # ──────────────────────────────────────────────
+  # Cloudflare Tunnel
+  # Routes traffic from Cloudflare edge → Traefik
+  # No inbound ports needed on the host firewall.
+  # ──────────────────────────────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - proxy
+
+  # ──────────────────────────────────────────────
+  # Traefik – reverse proxy
+  # Cloudflare terminates TLS; Traefik just routes.
+  # ──────────────────────────────────────────────
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+
+      # Single entry point – plain HTTP
+      # Cloudflare handles TLS; traffic arrives here over HTTP via the tunnel.
+      - "--entrypoints.web.address=:80"
+
+      # Logging
+      - "--log.level=INFO"
+      - "--accesslog=true"
+
     ports:
-      - "5432:5432"
+      # Only expose 80 locally; Cloudflare Tunnel reaches it without
+      # punching holes in the firewall.
+      - "80:80"
+
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    networks:
+      - proxy
 
-volumes:
-  postgres_data:
+  # ──────────────────────────────────────────────
+  # Backend – FastAPI + ARQ worker (supervisord)
+  # ──────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deployment-platform-backend:latest
+    container_name: deployment-platform-backend
+    restart: unless-stopped
+
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      # Redis is on the HOST – host-gateway resolves to the host IP
+      REDIS_URL: redis://host.docker.internal:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+
+    volumes:
+      # Docker SDK needs the socket to manage user containers
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - proxy
+
+    labels:
+      - "traefik.enable=true"
+      # Route api.thechinmay.in → backend:8000 (plain HTTP, Cloudflare handles TLS)
+      - "traefik.http.routers.backend.rule=Host(`${API_DOMAIN}`)"
+      - "traefik.http.routers.backend.entrypoints=web"
+      - "traefik.http.services.backend.loadbalancer.server.port=8000"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# ──────────────────────────────────────────────────
+# Networks
+# ──────────────────────────────────────────────────
+networks:
+  proxy:
+    external: true   # docker network create proxy

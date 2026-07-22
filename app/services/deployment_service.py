@@ -21,6 +21,14 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
             image_name,
             detach=True,
             name=container_name,
+            labels = {
+                    "traefik.enable": "true",
+                    f"traefik.http.routers.{container_name}.rule":
+                        f"Host(`{container_name}.deploy.thechinmay.in`)",
+
+                    f"traefik.http.services.{container_name}.loadbalancer.server.port":
+                        str(container_port),
+                },
             extra_hosts={
                 "host.docker.internal": "host-gateway"
             },
@@ -37,7 +45,7 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
                     deployment.container_name = container.name
                     deployment.container_id = container.id
                     deployment.host_port = port
-                    deployment.deployment_url = f"http://localhost:{port}"
+                    deployment.deployment_url = f"https://{container_name}.deploy.thechinmay.in"
                     await db.commit()
                 
                 db_success = True

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     REDIS_URL: str = "redis://localhost:6379/0"
-
+    CLOUDFLARE_TUNNEL_TOKEN: str = ""
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

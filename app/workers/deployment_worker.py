@@ -23,6 +23,7 @@ async def _deploy(deployment_id: int, image_name: str,env:dict, container_port:i
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.DEPLOYING, db=db)
         await run_deployment_logic(deployment_id=deployment_id, image_name=image_name,env=env,container_port=container_port)
         logging.info("ran the run deployment")
+        
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.RUNNING, db=db)
 
 
