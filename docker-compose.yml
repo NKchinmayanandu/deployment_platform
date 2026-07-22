@@ -26,13 +26,15 @@ services:
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     networks:
       - proxy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   # ──────────────────────────────────────────────
   # Traefik – reverse proxy
   # Cloudflare terminates TLS; Traefik just routes.
   # ──────────────────────────────────────────────
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.5
     container_name: traefik
     restart: unless-stopped
     command:

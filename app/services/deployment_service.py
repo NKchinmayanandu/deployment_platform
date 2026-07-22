@@ -21,6 +21,7 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
             image_name,
             detach=True,
             name=container_name,
+            network="proxy",    
             labels = {
                     "traefik.enable": "true",
                     f"traefik.http.routers.{container_name}.rule":
