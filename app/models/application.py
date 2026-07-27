@@ -24,7 +24,7 @@ class Application(Base):
     )
     environment_variables: Mapped[list["Environment"]] = relationship(
         "Environment", 
-        back_populates="application", 
+        back_populates="application",   
         cascade="all, delete-orphan"
     )
     container_port : Mapped[int] = mapped_column(default=8000)
