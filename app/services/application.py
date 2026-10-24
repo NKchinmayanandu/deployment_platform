@@ -45,8 +45,20 @@ async def get_user_applications(
     return [ApplicationOut.model_validate(app) for app in apps]
 
 
+from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
 async def get_application(
-    db: AsyncSession, app_id: int, current_user: User
+    db: AsyncSession,
+    app_id: int,
+    current_user: User,
 ) -> ApplicationOut:
-    application = await check_app(app_id,db=db)
+    application = await check_app(app_id, db=db)
+
+    if application is None or application.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Application not found",
+        )
+
     return ApplicationOut.model_validate(application)
