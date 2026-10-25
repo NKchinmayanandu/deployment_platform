@@ -1,5 +1,4 @@
 from app.infrastructure.docker_client import client
-from app.cache.port_allocation import get_next_port
 import asyncio
 import docker
 from app.db.session import AsyncSessionLocal
@@ -11,7 +10,6 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
     container_name = f"app-{deployment_id}"
     container = None
     try:
-        port = await get_next_port()
         await asyncio.to_thread(client.images.pull, image_name)
         container = await asyncio.to_thread(
             client.containers.run,
@@ -30,7 +28,6 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
             extra_hosts={
                 "host.docker.internal": "host-gateway"
             },
-            ports={f"{container_port}/tcp": port},
             environment=env
         )
         max_retries = 3
