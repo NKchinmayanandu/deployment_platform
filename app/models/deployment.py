@@ -40,4 +40,8 @@ class Deployment(Base):
     )
     deployment_url: Mapped[str | None] = mapped_column(String(60), unique=True)
     application: Mapped["Application"] = relationship(back_populates="deployment")
+
+    @property
+    def url(self) -> str | None:
+        return self.deployment_url
     

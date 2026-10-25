@@ -4,10 +4,7 @@ import asyncio
 import docker
 from app.db.session import AsyncSessionLocal
 from app.repositories.get_deployment import deployment_get
-import logging
-
-
-import asyncio
+from app.core.config import settings
 import logging
 
 async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, container_port: int):
@@ -25,7 +22,7 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
             labels = {
                     "traefik.enable": "true",
                     f"traefik.http.routers.{container_name}.rule":
-                        f"Host(`{container_name}.deploy.thechinmay.in`)",
+                        f"Host(`{container_name}.{settings.BASE_DOMAIN}`)",
 
                     f"traefik.http.services.{container_name}.loadbalancer.server.port":
                         str(container_port),
@@ -46,7 +43,7 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
                     deployment.container_name = container.name
                     deployment.container_id = container.id
                     deployment.host_port = port
-                    deployment.deployment_url = f"https://{container_name}.deploy.thechinmay.in"
+                    deployment.deployment_url = f"https://{container_name}.{settings.BASE_DOMAIN}"
                     await db.commit()
                 
                 db_success = True

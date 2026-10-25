@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     REDIS_URL: str = "redis://localhost:6379/0"
     CLOUDFLARE_TUNNEL_TOKEN: str = ""
+    API_DOMAIN: str = "api.thechinmay.in"
+    BASE_DOMAIN: str = "thechinmay.in"
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

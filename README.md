@@ -144,6 +144,7 @@ cp .env.example .env
 | `REDIS_URL` | Redis URL for local dev (`redis://localhost:6379/0`) |
 | `CLOUDFLARE_TUNNEL_TOKEN` | Token from Cloudflare Zero Trust → Tunnels |
 | `API_DOMAIN` | Public domain routed by Traefik (e.g. `api.thechinmay.in`) |
+| `BASE_DOMAIN` | Base domain for deployed user apps (e.g. `thechinmay.in`) |
 
 > **Note:** `REDIS_URL` in `.env` is used for local development outside Docker.
 > Inside Docker, `docker-compose.yml` hard-codes `redis://host.docker.internal:6379/0`
