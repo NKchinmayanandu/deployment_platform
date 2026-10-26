@@ -39,7 +39,6 @@ async def run_deployment_logic(deployment_id: int, image_name: str, env: dict, c
                     deployment = await deployment_get(deployment_id, db)
                     deployment.container_name = container.name
                     deployment.container_id = container.id
-                    deployment.host_port = port
                     deployment.deployment_url = f"https://{container_name}.{settings.BASE_DOMAIN}"
                     await db.commit()
                 

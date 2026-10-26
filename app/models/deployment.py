@@ -29,7 +29,6 @@ class Deployment(Base):
     )
     container_id: Mapped[str | None] = mapped_column(String(64))
     container_name: Mapped[str | None] = mapped_column(String(100),unique=True)
-    host_port: Mapped[int | None] = mapped_column(unique=True)
     status: Mapped[DeploymentStatus] = mapped_column(
         type_=Enum(DeploymentStatus, name="deploymentstatus", create_type=False),
         default=DeploymentStatus.QUEUED

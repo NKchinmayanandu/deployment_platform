@@ -41,7 +41,6 @@ async def deploy(
         deployment.status = DeploymentStatus.QUEUED
         deployment.container_id = None
         deployment.container_name = None
-        deployment.host_port = None
         deployment.deployment_url = None
     await db.commit()
     await db.refresh(deployment) 
