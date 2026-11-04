@@ -18,7 +18,7 @@ configure_mappers()
 
 
 async def _deploy(deployment_id: int, image_name: str,env:dict, container_port:int) -> None:
-    logging.info("_deploy has started ")
+    logging.info("deploy has started ")
     async with AsyncSessionLocal() as db:
         await update_db_status(deployment_id=deployment_id, status=DeploymentStatus.DEPLOYING, db=db)
         await run_deployment_logic(deployment_id=deployment_id, image_name=image_name,env=env,container_port=container_port)

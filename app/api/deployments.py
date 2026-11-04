@@ -14,6 +14,8 @@ import logging
 import asyncio
 from app.repositories.get_env import env_get
 from app.repositories.check_app import get_app
+from app.schemas.env import EnvironmentResponse,EnvironmentUpdate
+
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -190,6 +192,22 @@ async def deployment_logs(
 
     return {"logs":container_logs}
 
-    
+
+@router.get("/{app_id}/env",response_model=EnvironmentResponse)
+async def get_env(
+    app_id:int,
+    db:AsyncSession=Depends(get_db),
+    current_user:User=Depends(get_current_user)
+):
+    env = await env_get(app_id=app_id,db=db)
+    env = {row.key:row.value for row in env}
+    return env
 
 
+@router.patch("/{app_id}/env")
+async def update_env(
+    app_id:int,
+    db:AsyncSession=Depends(get_db),
+    current_user:User=Depends(get_current_user)
+):
+    pass
