@@ -199,9 +199,11 @@ async def get_env(
     db:AsyncSession=Depends(get_db),
     current_user:User=Depends(get_current_user)
 ):
+    
+    await get_app(app_id=app_id,db=db,current_user=current_user)
     env = await env_get(app_id=app_id,db=db)
     env = {row.key:row.value for row in env}
-    return env
+    return EnvironmentResponse.model_validate({"environment":env})
 
 
 @router.patch("/{app_id}/env")
