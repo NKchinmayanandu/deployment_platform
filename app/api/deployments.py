@@ -15,7 +15,7 @@ import asyncio
 from app.repositories.get_env import env_get
 from app.repositories.check_app import get_app
 from app.schemas.env import EnvironmentResponse,EnvironmentUpdate
-
+from app.services.user_env import update_user_env
 router = APIRouter(prefix="/deployments", tags=["Deployments"])
 
 
@@ -206,10 +206,15 @@ async def get_env(
     return EnvironmentResponse.model_validate({"environment":env})
 
 
-@router.patch("/{app_id}/env")
+@router.put("/{app_id}/env")
 async def update_env(
+    env : EnvironmentUpdate,
     app_id:int,
     db:AsyncSession=Depends(get_db),
     current_user:User=Depends(get_current_user)
 ):
-    pass
+    await get_app(app_id=app_id,db=db,current_user=current_user)
+    if await update_user_env(env=env,app_id=app_id,db=db,current_user=current_user):
+        return {"message":"updated successfully"}
+    else:
+        return {"message":"could not update env"}
