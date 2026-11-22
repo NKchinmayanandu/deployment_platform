@@ -1,0 +1,39 @@
+services:
+  backend:
+    command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.dev.conf"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deployment-platform-backend:dev
+    container_name: deployment-dev-platform
+    restart: unless-stopped
+
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: redis://host.docker.internal:6379/0
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      BASE_DOMAIN: ${BASE_DOMAIN:-thechinmay.in}
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    networks:
+      - proxy
+
+    labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.backend-dev.rule=Host(`${DEV_API_DOMAIN}`)"
+    - "traefik.http.routers.backend-dev.entrypoints=web"
+    - "traefik.http.services.backend-dev.loadbalancer.server.port=8000"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

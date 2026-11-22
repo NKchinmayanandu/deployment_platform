@@ -214,7 +214,7 @@ async def update_env(
     current_user:User=Depends(get_current_user)
 ):
     await get_app(app_id=app_id,db=db,current_user=current_user)
-    if await update_user_env(env=env,app_id=app_id,db=db,current_user=current_user):
+    if await update_user_env(env=env,app_id=app_id,db=db):
         return {"message":"updated successfully"}
     else:
         return {"message":"could not update env"}

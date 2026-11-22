@@ -8,7 +8,6 @@ async def update_user_env(
     env : EnvironmentUpdate,
     app_id:int,
     db:AsyncSession,
-    current_user:User
     ):
     new_env = env.variables
     old_env_rows = await env_get(app_id=app_id,db=db)

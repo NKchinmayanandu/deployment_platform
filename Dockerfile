@@ -26,10 +26,11 @@ COPY --from=builder /install /usr/local
 COPY . .
 
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.prod.conf
+COPY supervisord.dev.conf /etc/supervisor/conf.d/supervisord.dev.conf
 
 
 EXPOSE 8000
 
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.prod.conf"]
