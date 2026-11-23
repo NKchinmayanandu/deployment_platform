@@ -5,7 +5,6 @@ services:
       context: .
       dockerfile: Dockerfile
     image: deployment-platform-backend:dev
-    container_name: deployment-dev-platform
     restart: unless-stopped
 
     environment:
@@ -25,7 +24,7 @@ services:
     networks:
       - proxy
 
-    labels:
+    labels: !override
     - "traefik.enable=true"
     - "traefik.http.routers.backend-dev.rule=Host(`${DEV_API_DOMAIN}`)"
     - "traefik.http.routers.backend-dev.entrypoints=web"

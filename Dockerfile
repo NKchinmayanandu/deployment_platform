@@ -26,7 +26,7 @@ COPY --from=builder /install /usr/local
 COPY . .
 
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.prod.conf
+COPY supervisord.prod.conf /etc/supervisor/conf.d/supervisord.prod.conf
 COPY supervisord.dev.conf /etc/supervisor/conf.d/supervisord.dev.conf
 
 
