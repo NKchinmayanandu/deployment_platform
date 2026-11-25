@@ -23,7 +23,6 @@ class Application(Base):
         back_populates="application", cascade="all, delete-orphan", uselist=False
     )
     environment_variables: Mapped[list["Environment"]] = relationship(
-        "Environment", 
         back_populates="application",   
         cascade="all, delete-orphan"
     )

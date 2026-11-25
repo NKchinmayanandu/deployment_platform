@@ -8,6 +8,7 @@ from app.db.base import Base
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:   
     from app.models.application import Application
+    from app.models.health_checks import HealthCheck
 
 class DeploymentStatus(str, enum.Enum):
     QUEUED = "QUEUED"
@@ -39,6 +40,12 @@ class Deployment(Base):
     )
     deployment_url: Mapped[str | None] = mapped_column(String(60), unique=True)
     application: Mapped["Application"] = relationship(back_populates="deployment")
+
+    health_checks: Mapped[list["HealthCheck"]] = relationship(
+        back_populates="deployment",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     @property
     def url(self) -> str | None:
