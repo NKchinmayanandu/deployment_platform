@@ -46,3 +46,17 @@ async def deployment_get_app_none(app_id:int,db:AsyncSession,current_user:User):
     )
     result = result.scalar_one_or_none()
     return result
+
+async def get_user_deployment(
+    deployment_id: int,
+    user_id: int,
+    db: AsyncSession,
+):
+    return db.scalar(
+        select(Deployment)
+        .join(Deployment.application)
+        .where(
+            Deployment.id == deployment_id,
+            Application.user_id == user_id,
+        )
+    )

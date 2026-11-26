@@ -5,7 +5,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.core.config import settings
 from app.db.base import Base
-from app.models import User, Application, Deployment  # noqa: F401
+from app.models import User, Application, Deployment, health_checks  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg2://"))

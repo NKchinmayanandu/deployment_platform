@@ -9,7 +9,7 @@ from app.api.applications import router as applications_router
 from app.api.deployments import router as deployments_router
 from app.core.config import settings
 from app.utils.logging import setup_logging
-
+from app.db import models
 
 from arq.connections import RedisSettings, create_pool
 
